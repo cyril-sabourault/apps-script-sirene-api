@@ -1,20 +1,25 @@
+const API_URL_TEMPLATE = "https://api.insee.fr/api-sirene/3.11/siret?q=denominationUniteLegale%3A%22{companyName}%22%20AND%20etablissementSiege%3Atrue";
+const API_TOKEN = "REDACTED_API_TOKEN";
+
 /**
   MAIN
  */
 function SIRENE(companyName, forceRefresh = false) {
     if (!forceRefresh) {
-        let companyCACHE = getCache_(companyName);
-        if (companyCACHE) return companyCACHE;
+        let cachedPostalCode = getCachedPostalCode_(companyName);
+        if (cachedPostalCode) return cachedPostalCode;
     }
 
-    let company_data = callAPI_(companyName);
-    console.log(company_data.etablissements);
+    let companyData = fetchCompanyData_(companyName);
+    if (!companyData || !companyData.etablissements || companyData.etablissements.length === 0) {
+        throw new Error('No establishments found for the given company name.');
+    }
 
-    let adresseEtablissement = company_data.etablissements[0].adresseEtablissement
-    let codePostal = adresseEtablissement.codePostalEtablissement;
-    setCache_(companyName, codePostal);
+    let address = companyData.etablissements[0].adresseEtablissement;
+    let postalCode = address.codePostalEtablissement;
+    cachePostalCode_(companyName, postalCode);
 
-    return codePostal;
+    return postalCode;
 }
 
 
@@ -24,42 +29,39 @@ function SIRENE(companyName, forceRefresh = false) {
   - [API Reference (Swagger)]:            https://portail-api.insee.fr/catalog/api/2ba0e549-5587-3ef1-9082-99cd865de66f/doc?page=6548510e-c3e1-3099-be96-6edf02870699
   - [Recherche sur une variable]:         https://www.sirene.fr/static-resources/documentation/multi_histo_non_histo_311.html
  */
-function callAPI_(companyName) {
-    let API_URL = "https://api.insee.fr/api-sirene/3.11/siret?q=denominationUniteLegale%3A%22" + companyName + "%22%20AND%20etablissementSiege%3Atrue";
-    let API_TOKEN = "REDACTED_API_TOKEN";
-
+function fetchCompanyData_(companyName) {
+    let apiUrl = API_URL_TEMPLATE.replace("{companyName}", encodeURIComponent(companyName));
     let headers = { "X-INSEE-Api-Key-Integration": API_TOKEN };
 
-    let apiResponse = UrlFetchApp.fetch(API_URL, {
+    let response = UrlFetchApp.fetch(apiUrl, {
         method: 'GET',
         headers: headers
-    })
+    });
 
-    let apiData = apiResponse.getContentText();
-    return JSON.parse(apiData);
+    let responseData = response.getContentText();
+    return JSON.parse(responseData);
 }
 
 
 /**
  * CACHING
  */
-function getCache_(companyName) {
+function getCachedPostalCode_(companyName) {
     return CacheService.getScriptCache().get(companyName);
 }
 
-function setCache_(companyName, codePostal) {
-    return CacheService.getScriptCache().put(companyName, codePostal);
+function cachePostalCode_(companyName, postalCode) {
+    return CacheService.getScriptCache().put(companyName, postalCode);
 }
 
 
 /**
   TEST FUNCTIONS
  */
-
 function testCACHE() {
-    console.log(CacheService.getScriptCache().getAll(["ACOEM", "Google France"]));
+    console.log(CacheService.getScriptCache().getAll(["Devoteam G Cloud", "Google France"]));
 }
 
 function testSIRENE() {
-    console.log(SIRENE('Devoteam G Cloud'))
+    console.log(SIRENE("Devoteam G Cloud"));
 }
