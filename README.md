@@ -7,7 +7,7 @@ This project provides a Google Apps Script to fetch and cache postal codes for c
 1. **Clone the repository:**
 
    ```sh
-   git clone https://github.com/yourusername/apps-script-sirene-api.git
+   git clone https://github.com/cyril-sabourault/apps-script-sirene-api.git
    ```
 
 2. **Open the project in Google Apps Script:**
